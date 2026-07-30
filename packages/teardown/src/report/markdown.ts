@@ -30,6 +30,19 @@ function whatWasRead(report: TeardownReport): string {
       ...report.surface.videos.map(v => `- ${v.url} (${v.provider})`),
     );
   }
+  const unread = report.surface.coverage.filter(
+    c => c.status === 'fetch-failed' || c.status === 'skipped-cap'
+  );
+  if (unread.length > 0) {
+    lines.push(
+      '',
+      '**Pages that exist but were not read.** Findings that depend on these are flagged inline below, not asserted:',
+      ...unread.map(c => `- ${c.kind}${c.url ? ` (${c.url})` : ''} — ${
+        c.status === 'fetch-failed' ? `could not be fetched: ${c.reason}` : 'skipped by the page budget'
+      }`),
+    );
+  }
+
   if (report.surface.notes.length > 0) {
     lines.push('', '**Limits of this read:**', ...report.surface.notes.map(n => `- ${n}`));
   }
@@ -97,6 +110,10 @@ function gapsSection(report: TeardownReport): string {
       '',
       `**What it costs.** ${gap.costOfTheGap}`,
     );
+
+    if (gap.coverageWarning) {
+      lines.push('', `> ⚠️ **Unverified absence.** ${gap.coverageWarning}`);
+    }
 
     const verified = gap.evidence.filter(e => e.verified !== false);
     if (verified.length > 0) {

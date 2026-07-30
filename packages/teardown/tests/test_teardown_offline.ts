@@ -9,7 +9,7 @@ import { loadRubric, validateRubric, listVersions } from '../src/rubric.js';
 import { htmlToText, extractLinks, extractVideoUrls, decodeEntities } from '../src/surface/extract.js';
 import { buildQuoteIndex, quoteIsPresent, verifyClaims } from '../src/grill/verify.js';
 import { normalize } from '../src/grill/gaps.js';
-import { runTeardownOnSurface, writeTeardownBundle } from '../src/teardown.js';
+import { runTeardownOnSurface, writeTeardownBundle, flagCoverage } from '../src/teardown.js';
 import { renderMarkdown } from '../src/report/markdown.js';
 import { diffReports, renderDiffMarkdown } from '../src/report/diff.js';
 import type { Rubric, WebSurface } from '../src/types.js';
@@ -47,6 +47,19 @@ function fixtureSurface(): WebSurface {
       },
     ],
     videos: [],
+    coverage: [
+      { kind: 'landing', status: 'fetched', url: 'https://rezolve.example/' },
+      { kind: 'pricing', status: 'fetched', url: 'https://rezolve.example/pricing' },
+      // Linked but unreachable — the case that makes an absence-gap unsafe.
+      { kind: 'security', status: 'fetch-failed', url: 'https://rezolve.example/security', reason: 'HTTP 503' },
+      // Linked but cut by the page budget.
+      { kind: 'faq', status: 'skipped-cap', url: 'https://rezolve.example/faq' },
+      // Genuinely absent — evidence of absence, so gaps on it stand.
+      { kind: 'docs', status: 'not-linked' },
+      { kind: 'how-it-works', status: 'not-linked' },
+      { kind: 'about', status: 'not-linked' },
+      { kind: 'other', status: 'not-linked' },
+    ],
     notes: ['No docs page was linked from the landing page.'],
   };
 }
@@ -361,6 +374,74 @@ async function testPipeline() {
   return report;
 }
 
+async function testCoverageGuard() {
+  const rubric = await loadRubric();
+  const surface = fixtureSurface();
+
+  const bare = {
+    rank: 1, axisName: '', title: 't', buyerQuestion: '', dealStage: '',
+    whatThePageSays: 'x', whatsMissing: 'y', costOfTheGap: 'z',
+  };
+
+  // security page exists but returned 503 → absence of evidence, must warn.
+  const unsafe = flagCoverage({ ...bare, axisId: 'blast-radius', evidence: [] }, surface, rubric);
+  assert(unsafe.coverageWarning !== undefined, 'a gap resting on an unread page must be flagged');
+  assert(unsafe.coverageWarning!.includes('security'), 'the warning must name the unread page kind');
+  assert(unsafe.coverageWarning!.includes('HTTP 503'), 'the warning must carry the fetch failure reason');
+
+  // faq was cut by the page budget → also unsafe.
+  const capped = flagCoverage({ ...bare, axisId: 'refusal-surface', evidence: [] }, surface, rubric);
+  assert(capped.coverageWarning !== undefined, 'a gap resting on a budget-skipped page must be flagged');
+  assert(capped.coverageWarning!.includes('page budget'), 'the warning must say the budget cut it');
+
+  // about was never linked → evidence of absence, so the gap stands unflagged.
+  const legitimate = flagCoverage({ ...bare, axisId: 'boring-case-proof', evidence: [] }, surface, rubric);
+  assert(
+    legitimate.coverageWarning === undefined,
+    'a page that was never linked is itself evidence — that gap must NOT be flagged',
+  );
+
+  // Verified evidence outranks coverage: we have proof, so the gap is safe.
+  const evidenced = flagCoverage(
+    {
+      ...bare, axisId: 'blast-radius',
+      evidence: [{ quote: 'checks your knowledge base', sourceUrl: 'https://rezolve.example/', verified: true }],
+    },
+    surface, rubric,
+  );
+  assert(evidenced.coverageWarning === undefined, 'a gap with verified evidence must never be flagged');
+
+  // Unverified evidence does not count as proof.
+  const fakeEvidence = flagCoverage(
+    {
+      ...bare, axisId: 'blast-radius',
+      evidence: [{ quote: 'invented', sourceUrl: 'https://rezolve.example/', verified: false }],
+    },
+    surface, rubric,
+  );
+  assert(fakeEvidence.coverageWarning !== undefined, 'unverified evidence must not suppress the flag');
+
+  // End to end: the warning reaches the rendered report.
+  const engine = new FakeGrill([
+    goodClaims(),
+    {
+      gaps: [{ ...bare, axisId: 'blast-radius', title: 'No statement of what it writes to', evidence: [] }],
+      spine: { beats: [], objections: [] },
+    },
+  ]);
+  const report = await runTeardownOnSurface(surface, { rubric, engine });
+  assert(report.gaps[0].coverageWarning !== undefined, 'the guard runs inside the pipeline');
+
+  const markdown = renderMarkdown(report);
+  assert(markdown.includes('Unverified absence'), 'the report must mark the finding as unverified');
+  assert(
+    markdown.includes('Pages that exist but were not read'),
+    'the report must disclose unread pages up front',
+  );
+
+  console.error('  [coverage guard] ok');
+}
+
 async function testVoidedReport() {
   const rubric = await loadRubric();
   const engine = new FakeGrill([
@@ -477,6 +558,7 @@ async function run() {
   testVerification();
   await testNormalizationCaps();
   const report = await testPipeline();
+  await testCoverageGuard();
   await testVoidedReport();
   await testDiff(report);
   await testBundleWrite(report);

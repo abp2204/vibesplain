@@ -38,12 +38,14 @@ const CLAIM_SCHEMA = {
       required: ['stated', 'unit', 'evidence'],
       properties: {
         stated: { type: 'boolean', description: 'True only if the page actually names a unit.' },
+        // `anyOf` rather than a `type: [...]` array — structured outputs
+        // document the former for unions and do not list the latter.
         unit: {
-          type: ['string', 'null'],
+          anyOf: [{ type: 'string' }, { type: 'null' }],
           description: 'The unit in buyer terms (per resolved ticket, per document, per seat), or null.',
         },
         evidence: {
-          type: ['string', 'null'],
+          anyOf: [{ type: 'string' }, { type: 'null' }],
           description: 'Verbatim quote naming the unit, or null when the page never defines one.',
         },
       },

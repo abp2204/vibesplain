@@ -7,6 +7,8 @@ export interface RubricAxis {
   buyerQuestion: string;
   dealStage: string;
   probes: string[];
+  /** Page kinds that normally carry this axis's evidence — drives the coverage guard. */
+  evidencePages: PageKind[];
 }
 
 export interface Rubric {
@@ -43,12 +45,28 @@ export interface VideoRef {
   transcript: string | null;
 }
 
+/**
+ * Why a page kind is or is not in the surface. The distinction matters: a kind
+ * that was never linked is evidence of absence, while a kind we know exists but
+ * failed to read is absence of evidence — and a gap asserted on the second is a
+ * false accusation waiting to be corrected in public.
+ */
+export type CoverageStatus = 'fetched' | 'not-linked' | 'fetch-failed' | 'skipped-cap';
+
+export interface PageCoverage {
+  kind: PageKind;
+  status: CoverageStatus;
+  url?: string;
+  reason?: string;
+}
+
 export interface WebSurface {
   rootUrl: string;
   host: string;
   fetchedAt: string;
   pages: SurfacePage[];
   videos: VideoRef[];
+  coverage: PageCoverage[];
   notes: string[];
 }
 
@@ -98,6 +116,11 @@ export interface Gap {
   whatsMissing: string;
   costOfTheGap: string;
   evidence: Evidence[];
+  /**
+   * Set when this gap rests on an absence the crawl cannot vouch for: no
+   * verified evidence, and a page that carries this axis went unread.
+   */
+  coverageWarning?: string;
 }
 
 // ---------- Demo spine (S4, S5, S6) ----------
@@ -152,6 +175,7 @@ export interface TeardownReport {
   surface: {
     pages: { url: string; kind: PageKind; title: string; chars: number; truncated: boolean }[];
     videos: VideoRef[];
+    coverage: PageCoverage[];
     notes: string[];
   };
   claims: ClaimInventory;

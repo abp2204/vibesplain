@@ -4,7 +4,11 @@
   "scope": "Seed to Series A companies selling an AI agent as the primary product.",
   "maxGaps": 6,
   "calibration": {
-    "expectDominant": ["unit-of-work", "failure-behavior", "time-to-first-value"],
+    "expectDominant": [
+      "unit-of-work",
+      "failure-behavior",
+      "time-to-first-value"
+    ],
     "note": "Axes 1, 2 and 8 are where most agent landing pages fail. If they do not dominate findings, treat that as a signal the rubric is miscalibrated, not that the company is fine."
   },
   "spine": {
@@ -15,7 +19,9 @@
   },
   "objections": {
     "count": 3,
-    "mandatoryAxes": ["failure-behavior"]
+    "mandatoryAxes": [
+      "failure-behavior"
+    ]
   },
   "axes": [
     {
@@ -28,6 +34,9 @@
         "Does the page name a countable unit (per resolved ticket, per document, per hour saved, per seat)?",
         "Is the unit the same one pricing is denominated in, or do the two disagree?",
         "If the product is priced per seat but the value is per task, is that gap acknowledged anywhere?"
+      ],
+      "evidencePages": [
+        "pricing"
       ]
     },
     {
@@ -40,6 +49,10 @@
         "Does the page state what the agent does when it is uncertain or wrong?",
         "Is there a stated accuracy, escalation path, or rollback story?",
         "Are failures framed as handled, or is the page silent on the possibility?"
+      ],
+      "evidencePages": [
+        "docs",
+        "faq"
       ]
     },
     {
@@ -52,6 +65,10 @@
         "Does the page enumerate what systems the agent reads from and writes to?",
         "Are write actions distinguished from read actions?",
         "Is permission scoping, data residency, or retention addressed?"
+      ],
+      "evidencePages": [
+        "security",
+        "docs"
       ]
     },
     {
@@ -64,6 +81,10 @@
         "Does the page say where a human approves, reviews, or intervenes?",
         "Is the human-in-the-loop step presented as permanent or as training wheels that come off?",
         "Is there a stated path from supervised to autonomous?"
+      ],
+      "evidencePages": [
+        "how-it-works",
+        "docs"
       ]
     },
     {
@@ -76,6 +97,10 @@
         "Does the page say whether the agent responds in seconds, minutes, or overnight?",
         "Is the interaction model (chat, queue, background job, webhook) stated?",
         "Does the demo imply a latency the product does not actually deliver?"
+      ],
+      "evidencePages": [
+        "docs",
+        "how-it-works"
       ]
     },
     {
@@ -88,6 +113,9 @@
         "Does the page show a high-frequency, unglamorous workflow?",
         "Are the examples the hardest cases or the most common ones?",
         "Is there volume or repetition evidence, as opposed to a single impressive anecdote?"
+      ],
+      "evidencePages": [
+        "about"
       ]
     },
     {
@@ -100,6 +128,10 @@
         "Does the page state anything the agent will not attempt?",
         "Are limits framed as deliberate design, or absent entirely?",
         "Does the breadth of claims make the product sound unbounded?"
+      ],
+      "evidencePages": [
+        "docs",
+        "faq"
       ]
     },
     {
@@ -112,6 +144,10 @@
         "Does the page state how long setup or onboarding takes?",
         "Can the buyer see it work on their own data without a sales call?",
         "Is there a self-serve trial, sandbox, or sample run — and is the path to it stated?"
+      ],
+      "evidencePages": [
+        "docs",
+        "pricing"
       ]
     }
   ]

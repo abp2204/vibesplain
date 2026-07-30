@@ -1,4 +1,4 @@
-import type { PageKind, SurfacePage, VideoRef, WebSurface } from '../types.js';
+import type { PageCoverage, PageKind, SurfacePage, VideoRef, WebSurface } from '../types.js';
 import { extractLinks, extractVideoUrls, htmlToText } from './extract.js';
 
 export interface CrawlOptions {
@@ -164,9 +164,12 @@ export async function crawlSurface(rootInput: string, options: CrawlOptions = {}
     }
   }
 
-  const queue = [...bestByKind.entries()]
-    .sort((a, b) => b[1].weight - a[1].weight)
-    .slice(0, Math.max(0, opts.maxPages - 1));
+  const ranked = [...bestByKind.entries()].sort((a, b) => b[1].weight - a[1].weight);
+  const budget = Math.max(0, opts.maxPages - 1);
+  const queue = ranked.slice(0, budget);
+  const overflow = ranked.slice(budget);
+
+  const coverage = new Map<PageKind, PageCoverage>([['landing', { kind: 'landing', status: 'fetched', url: landingUrl }]]);
 
   const visited = new Set<string>([landingUrl]);
   for (const [kind, candidate] of queue) {
@@ -176,9 +179,11 @@ export async function crawlSurface(rootInput: string, options: CrawlOptions = {}
     const result = await fetchPage(candidate.url, opts);
     if ('error' in result) {
       notes.push(`Could not fetch ${kind} page ${candidate.url}: ${result.error}.`);
+      coverage.set(kind, { kind, status: 'fetch-failed', url: candidate.url, reason: result.error });
       continue;
     }
     pages.push(toPage(result.finalUrl, kind, result.html, opts.maxCharsPerPage));
+    coverage.set(kind, { kind, status: 'fetched', url: result.finalUrl });
     for (const video of extractVideoUrls(result.html, result.finalUrl)) {
       if (!videos.has(video.url)) {
         videos.set(video.url, { ...video, foundOn: result.finalUrl, transcript: null });
@@ -186,8 +191,18 @@ export async function crawlSurface(rootInput: string, options: CrawlOptions = {}
     }
   }
 
+  for (const [kind, candidate] of overflow) {
+    notes.push(`Skipped ${kind} page ${candidate.url} — the --max-pages budget of ${opts.maxPages} was already spent.`);
+    coverage.set(kind, { kind, status: 'skipped-cap', url: candidate.url });
+  }
+
+  const ALL_KINDS: PageKind[] = ['landing', 'pricing', 'docs', 'how-it-works', 'security', 'faq', 'about', 'other'];
+  for (const kind of ALL_KINDS) {
+    if (!coverage.has(kind)) coverage.set(kind, { kind, status: 'not-linked' });
+  }
+
   for (const kind of ['pricing', 'docs', 'how-it-works'] as PageKind[]) {
-    if (!pages.some(p => p.kind === kind)) {
+    if (coverage.get(kind)?.status === 'not-linked') {
       notes.push(`No ${kind} page was linked from the landing page.`);
     }
   }
@@ -211,8 +226,18 @@ export async function crawlSurface(rootInput: string, options: CrawlOptions = {}
     fetchedAt: new Date().toISOString(),
     pages,
     videos: [...videos.values()],
+    coverage: [...coverage.values()],
     notes,
   };
+}
+
+/**
+ * Page kinds we know exist but failed to read. These are the ones that make an
+ * "the page never says X" finding unsafe — unlike a kind that was never linked,
+ * which is itself evidence.
+ */
+export function unreadKinds(surface: WebSurface): PageCoverage[] {
+  return surface.coverage.filter(c => c.status === 'fetch-failed' || c.status === 'skipped-cap');
 }
 
 /** The exact text handed to the grill pass — also the corpus quotes are verified against. */

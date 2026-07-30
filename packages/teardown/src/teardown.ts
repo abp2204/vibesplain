@@ -1,13 +1,44 @@
 import { ArtifactBundleWriter, type Artifact } from '@vibesplain/brain';
-import type { Rubric, TeardownReport, WebSurface } from './types.js';
-import { crawlSurface, type CrawlOptions } from './surface/fetch.js';
+import type { Gap, Rubric, TeardownReport, WebSurface } from './types.js';
+import { crawlSurface, unreadKinds, type CrawlOptions } from './surface/fetch.js';
 import { extractClaims } from './grill/claims.js';
 import { grillSurface } from './grill/gaps.js';
 import { buildQuoteIndex, quoteIsPresent, verifyClaims, verifyEvidence } from './grill/verify.js';
 import { renderMarkdown } from './report/markdown.js';
 import type { GrillEngine } from './grill/client.js';
 
-export const SCHEMA_VERSION = '1.0.0';
+export const SCHEMA_VERSION = '1.1.0';
+
+/**
+ * A gap that says "the page never addresses X" is only safe when we actually
+ * read the pages where X normally lives. If the axis has no verified evidence
+ * *and* a page carrying it went unread — linked but unfetchable, or cut by the
+ * page budget — the finding is absence of evidence, not evidence of absence.
+ *
+ * These get flagged rather than deleted: the gap may well be real, and the
+ * operator is the one who should decide. What must not happen is publishing it
+ * as fact under a named company and being corrected with the page we skipped.
+ */
+export function flagCoverage(gap: Gap, surface: WebSurface, rubric: Rubric): Gap {
+  if (gap.evidence.some(e => e.verified)) return gap;
+
+  const axis = rubric.axes.find(a => a.id === gap.axisId);
+  if (!axis) return gap;
+
+  const unread = unreadKinds(surface).filter(c => axis.evidencePages.includes(c.kind));
+  if (unread.length === 0) return gap;
+
+  const detail = unread
+    .map(c => `${c.kind} (${c.status === 'fetch-failed' ? `could not be fetched: ${c.reason}` : 'skipped by the page budget'}${c.url ? ` — ${c.url}` : ''})`)
+    .join('; ');
+
+  return {
+    ...gap,
+    coverageWarning:
+      `This gap has no verified evidence, and a page that normally carries it went unread: ${detail}. ` +
+      `Re-run with a higher --max-pages, or read that page yourself, before treating this as a finding.`,
+  };
+}
 
 export interface RunOptions extends CrawlOptions {
   rubric: Rubric;
@@ -67,9 +98,18 @@ export async function runTeardownOnSurface(
   if (!voided) {
     onProgress(`Grilling against rubric v${rubric.version}`);
     const result = await grillSurface(engine, surface, inventory, rubric);
-    gaps = result.gaps.map(gap => ({ ...gap, evidence: verifyEvidence(index, gap.evidence) }));
+    gaps = result.gaps.map(gap => flagCoverage(
+      { ...gap, evidence: verifyEvidence(index, gap.evidence) },
+      surface,
+      rubric,
+    ));
     spine = result.spine;
+
+    const unsafe = gaps.filter(g => g.coverageWarning).length;
     onProgress(`Found ${gaps.length} gap(s); spine has ${spine.beats.length} beat(s)`);
+    if (unsafe > 0) {
+      onProgress(`${unsafe} gap(s) rest on a page that could not be read — flagged, not published as fact`);
+    }
   } else {
     onProgress('No claim survived verification — report voided, critique skipped');
   }
@@ -89,6 +129,7 @@ export async function runTeardownOnSurface(
         url, kind, title, chars, truncated,
       })),
       videos: surface.videos,
+      coverage: surface.coverage,
       notes: surface.notes,
     },
     claims: inventory,

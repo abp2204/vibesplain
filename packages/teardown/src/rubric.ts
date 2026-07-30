@@ -1,7 +1,11 @@
 import { readFile, readdir } from 'fs/promises';
 import { join, dirname, resolve } from 'path';
 import { fileURLToPath } from 'url';
-import type { Rubric } from './types.js';
+import type { PageKind, Rubric } from './types.js';
+
+const PAGE_KINDS: PageKind[] = [
+  'landing', 'pricing', 'docs', 'how-it-works', 'security', 'faq', 'about', 'other',
+];
 
 /** `<pkg>/rubric/` — resolved from this module, so it survives `npm link` and global installs. */
 export function rubricDir(): string {
@@ -91,6 +95,14 @@ export function validateRubric(value: unknown, source: string): Rubric {
     }
     if (!Array.isArray(a.probes) || a.probes.length === 0) {
       fail(`axes[${i}] ("${a.id}") must have at least one probe`);
+    }
+    if (!Array.isArray(a.evidencePages) || a.evidencePages.length === 0) {
+      fail(`axes[${i}] ("${a.id}") must list at least one "evidencePages" kind`);
+    }
+    for (const kind of a.evidencePages as string[]) {
+      if (!PAGE_KINDS.includes(kind as PageKind)) {
+        fail(`axes[${i}] ("${a.id}") lists unknown page kind "${kind}"`);
+      }
     }
   }
 
