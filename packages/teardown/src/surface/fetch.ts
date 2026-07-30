@@ -90,7 +90,23 @@ async function fetchPage(
         accept: 'text/html,application/xhtml+xml',
       },
     });
-    if (!response.ok) return { error: `HTTP ${response.status}` };
+    if (!response.ok) {
+      // Include a slice of the body. A bare "HTTP 403" is ambiguous between
+      // the site defending itself and something in front of you refusing to
+      // connect — a corporate proxy, a sandbox egress allowlist, a WAF. The
+      // body almost always says which, and mistaking one for the other leads
+      // to the wrong conclusion about whether a target is reachable.
+      let hint = '';
+      try {
+        const body = (await response.text()).replace(/\s+/g, ' ').trim();
+        if (body && body.length <= 300 && !/^<!?[a-z]/i.test(body)) {
+          hint = ` — ${body}`;
+        }
+      } catch {
+        // Body unreadable; the status alone will have to do.
+      }
+      return { error: `HTTP ${response.status}${hint}` };
+    }
 
     const contentType = response.headers.get('content-type') ?? '';
     if (contentType && !/text\/html|application\/xhtml/i.test(contentType)) {

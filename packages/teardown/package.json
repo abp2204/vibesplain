@@ -5,6 +5,9 @@
   "description": "Reads an AI agent company's public web surface and returns the positioning gaps costing them deals, plus the demo spine that closes them.",
   "type": "module",
   "license": "MIT",
+  "engines": {
+    "node": ">=20"
+  },
   "bin": {
     "teardown": "dist/index.js"
   },

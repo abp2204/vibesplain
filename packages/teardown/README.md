@@ -10,6 +10,40 @@ Agent products are structurally hard to demo. The output is probabilistic, the v
 
 The demo tooling category (Navattic, Storylane, Arcade, Reprise) solves demo *mechanics*: record, annotate, make clickable. None of them address what story the demo should tell. That's where demos actually fail.
 
+## Run the sweep (start here — no API key needed)
+
+The sweep probes a list of company URLs and tells you which ones have a public
+surface thick enough to grill. Run it before spending a token: a company whose
+pages don't fetch produces a voided report, and there's nothing to sell.
+
+From a machine with normal internet access (Node 20+):
+
+```bash
+git clone https://github.com/abp2204/vibesplain.git
+cd vibesplain
+git checkout claude/teardown-prd-v0-1-pwoasf
+
+npm install
+npm run build -w packages/brain      # teardown imports brain, so build it first
+npm run build -w packages/teardown
+
+node packages/teardown/dist/index.js sweep \
+  --file packages/teardown/targets.txt \
+  --out sweep.csv
+```
+
+That's the whole path — the `cli` and `ui` packages are not needed for this and
+you can skip the full `npm run build`.
+
+Edit `targets.txt` to change the list (one URL per line, `#` for comments), or
+pass URLs directly: `... sweep https://example.com https://other.com`.
+
+Reading the output: `ok=yes` means the surface is worth a teardown. `ok=NO` with
+a low `total_chars` means the site is probably client-rendered and the report
+would void. `ok=NO` with an HTTP error means it never fetched at all — the error
+text is included, which distinguishes a site blocking you from a proxy or egress
+allowlist in front of you.
+
 ## Usage
 
 ```bash
