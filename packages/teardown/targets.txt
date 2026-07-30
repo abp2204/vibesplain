@@ -1,0 +1,14 @@
+# Sweep list — one URL per line, # starts a comment.
+#   node packages/teardown/dist/index.js sweep --file packages/teardown/targets.txt --out sweep.csv
+# Paste the resulting rows into docs/teardown-targets.csv (dry_run_chars / dry_run_ok).
+
+# --- List A: the three published teardowns (PRD §8, non-prospects) ---
+https://cognition.ai
+https://sierra.ai
+https://harvey.ai
+
+# --- List A bench ---
+https://decagon.ai
+https://www.glean.com
+
+# --- List B: prospects. Add rows as you source them. ---

@@ -22,6 +22,11 @@ node packages/teardown/dist/index.js run https://example-agent-co.com
 # See exactly what would be sent to the model, without calling it
 node packages/teardown/dist/index.js run https://example-agent-co.com --dry-run
 
+# Probe a whole target list for fetchability → CSV. No API key needed.
+# Run this before spending a token: a company whose surface does not fetch
+# produces a voided report, and there is nothing to sell.
+node packages/teardown/dist/index.js sweep --file packages/teardown/targets.txt --out sweep.csv
+
 # Inspect the rubric
 node packages/teardown/dist/index.js rubric
 

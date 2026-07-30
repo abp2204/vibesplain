@@ -28,7 +28,7 @@ I did **not** produce a list of seed-stage names with stage claims attached. The
 
 ### Sourcing, best first
 
-1. **YC company directory**, filtered by batch + AI. Authoritative, enumerable, self-described, and free. W26 and S26 are the relevant batches. Note the directory 403s automated fetches — browse it manually.
+1. **YC company directory**, filtered by batch + AI. Authoritative, enumerable, self-described, and free. W26 and S26 are the relevant batches.
 2. **Primary funding announcements** — Business Wire / PR Newswire / the company's own blog. This is the only funding data worth trusting. (Example that survived checking: Prophet Security's $30M Series A led by Accel with Bain Capital Ventures, announced July 2025 — an AI SOC analyst that triages and investigates alerts. By now likely past the target band, but the sourcing pattern is the point.)
 3. **Crunchbase / PitchBook** if you have a seat. Otherwise their free tier plus the press release.
 4. **Vertical trade press** — the insurance, healthcare-RCM, logistics and legal trades cover their own AI entrants earlier and more accurately than generalist AI blogs.
@@ -40,7 +40,7 @@ A row earns a place only if all five are true:
 1. **The agent is the product**, not an AI feature bolted to a SaaS product. If the pricing page sells seats of a platform and the agent is one tab, they don't have your problem.
 2. **Seed or Series A.** Pre-seed can't pay $1.5–3k. Series B has an in-house product marketer who owns this.
 3. **B2B with a real sales motion.** They must actually give demos. Self-serve PLG companies have a landing-page problem, not a demo problem — different product.
-4. **The public surface is fetchable.** Run `teardown run <url> --dry-run` before adding the row. If it returns near-empty, the report will void and you have nothing to sell. This is a hard gate, not a nice-to-have.
+4. **The public surface is fetchable.** Sweep the URL before adding the row (`teardown sweep <url>`, or `teardown run <url> --dry-run` to read the actual text). If it comes back thin, the report will void and you have nothing to sell. This is a hard gate, not a nice-to-have.
 5. **At least one axis visibly fails on the landing page.** A thirty-second read. If you can't spot one, either they're genuinely good or the rubric doesn't fire on them — both are worth knowing before you spend a call.
 
 ### Spreadsheet columns
@@ -57,7 +57,15 @@ Insurance claims/underwriting, healthcare RCM and prior authorization, freight a
 
 ## Two findings that affect the ICP
 
-**1. Automated fetching is blocked more than expected.** Three of the sources I tried returned 403 to an automated fetch: the YC company directory, and two funding trackers. That's the same class of failure the crawler will hit on target sites, and it's the reason the `--dry-run` sweep is the first thing to run — before writing outreach, before spending a token. If a large share of the target list is unfetchable, "the scraper is commodity" is wrong and the sequencing of the whole build changes.
+**1. Fetchability is still unmeasured — and the sweep is the only thing that will measure it.** An earlier draft of this document claimed automated fetching was widely blocked, citing 403s from the YC directory and two funding trackers. That was wrong: those 403s came from the build sandbox's egress allowlist, not from the sites. `example.com` returned the same 403, which is what gave it away. Nothing is currently known about whether the target list defends against automated fetching.
+
+So the question the sweep answers stays completely open, and it is the highest-value unknown in the project. Run it from a machine with real egress:
+
+```bash
+node packages/teardown/dist/index.js sweep --file packages/teardown/targets.txt --out sweep.csv
+```
+
+Each row reports pages fetched, total characters, which page kinds came back, and whether the surface is thick enough to grill. A `NO` in the `ok` column means the report would void — there is nothing to sell on that company. If a large share of the list comes back `NO`, then "the scraper is commodity" is wrong, the scraper is the product risk, and the build sequence changes.
 
 **2. The seed/Series A band in the obvious vertical is thinning.** Reported figures for AI customer support put seed + Series A at ~62% of *deals* but only ~11% of *capital* over the trailing year, and only ~3% of 2026 year-to-date capital, with Series B+ taking the rest. Separately, YC's recent batches have shifted toward agent *infrastructure* — identity, payments, memory, sandboxes, browser access — rather than agent products. (Aggregator-sourced, directionally plausible, not verified.)
 

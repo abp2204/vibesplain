@@ -76,6 +76,83 @@ program
   });
 
 program
+  .command('sweep')
+  .argument('[urls...]', 'Company URLs to probe')
+  .description('Probe many URLs for fetchability and emit CSV — the screen before you spend a token')
+  .option('--file <path>', 'Read URLs from a file, one per line (# comments allowed)')
+  .option('--max-pages <n>', 'Pages per company', '6')
+  .option('--max-chars <n>', 'Per-page character cap', '20000')
+  .option('--min-chars <n>', 'Below this total, treat the surface as too thin to grill', '1500')
+  .option('--out <file>', 'Write CSV to a file instead of stdout')
+  .action(async (urls: string[], options) => {
+    try {
+      const targets = [...urls];
+      if (options.file) {
+        const lines = (await readFile(resolve(options.file), 'utf8')).split('\n');
+        for (const line of lines) {
+          const trimmed = line.split('#')[0].trim();
+          if (trimmed) targets.push(trimmed);
+        }
+      }
+      if (targets.length === 0) {
+        throw new Error('No URLs given. Pass them as arguments or via --file.');
+      }
+
+      const minChars = Number(options.minChars);
+      const rows = [
+        'url,ok,pages,total_chars,kinds_fetched,kinds_unread,videos,note',
+      ];
+
+      for (const [i, target] of targets.entries()) {
+        process.stderr.write(`[${i + 1}/${targets.length}] ${target} ... `);
+        try {
+          const surface = await crawlSurface(target, {
+            maxPages: Number(options.maxPages),
+            maxCharsPerPage: Number(options.maxChars),
+          });
+          const totalChars = surface.pages.reduce((n, p) => n + p.text.length, 0);
+          const fetched = surface.coverage.filter(c => c.status === 'fetched').map(c => c.kind);
+          const unread = surface.coverage
+            .filter(c => c.status === 'fetch-failed' || c.status === 'skipped-cap')
+            .map(c => c.kind);
+          const ok = totalChars >= minChars;
+          const note = ok
+            ? ''
+            : `only ${totalChars} chars of text — likely client-rendered, report would void`;
+
+          rows.push([
+            csv(surface.rootUrl), ok ? 'yes' : 'NO', String(surface.pages.length),
+            String(totalChars), csv(fetched.join(' ')), csv(unread.join(' ')),
+            String(surface.videos.length), csv(note),
+          ].join(','));
+
+          process.stderr.write(`${ok ? 'ok' : 'THIN'} — ${surface.pages.length} page(s), ${totalChars.toLocaleString()} chars\n`);
+        } catch (err) {
+          const message = (err as Error).message;
+          rows.push([csv(target), 'NO', '0', '0', '', '', '0', csv(message)].join(','));
+          process.stderr.write(`FAILED — ${message}\n`);
+        }
+      }
+
+      const csvText = rows.join('\n') + '\n';
+      if (options.out) {
+        const target = resolve(options.out);
+        await mkdir(dirname(target), { recursive: true });
+        await writeFile(target, csvText, 'utf8');
+        process.stderr.write(`\nWrote ${target}\n`);
+      } else {
+        process.stdout.write(csvText);
+      }
+
+      const usable = rows.length - 1 - rows.slice(1).filter(r => r.includes(',NO,')).length;
+      process.stderr.write(`\n${usable}/${targets.length} usable. Only usable rows are worth a teardown.\n`);
+    } catch (err) {
+      process.stderr.write(`teardown: ${(err as Error).message}\n`);
+      process.exitCode = 1;
+    }
+  });
+
+program
   .command('diff')
   .argument('<before>', 'Path to the earlier report.json')
   .argument('<after>', 'Path to the later report.json')
@@ -123,6 +200,10 @@ program
       process.exitCode = 1;
     }
   });
+
+function csv(value: string): string {
+  return /[",\n]/.test(value) ? `"${value.replace(/"/g, '""')}"` : value;
+}
 
 async function readReport(path: string): Promise<TeardownReport> {
   const resolved = resolve(path);
