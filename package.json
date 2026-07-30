@@ -5,9 +5,9 @@
     "packages/*"
   ],
   "scripts": {
-    "build": "npm run build -w packages/brain && npm run build -w packages/cli && npm run build -w packages/ui && node scripts/bundle-ui.js",
+    "build": "npm run build -w packages/brain && npm run build -w packages/cli && npm run build -w packages/ui && node scripts/bundle-ui.js && npm run build -w packages/teardown",
     "dev:ui": "npm run dev -w packages/ui",
-    "test:regression": "tsx packages/cli/tests/test_validation_report.ts && tsx packages/cli/tests/test_logic_fixes.ts && tsx packages/cli/tests/test_no_adapter_safety.ts",
+    "test:regression": "tsx packages/cli/tests/test_validation_report.ts && tsx packages/cli/tests/test_logic_fixes.ts && tsx packages/cli/tests/test_no_adapter_safety.ts && tsx packages/teardown/tests/test_teardown_offline.ts",
     "test:package": "./scripts/test-package-portability.sh",
     "release": "npm run build && npm run test:regression && npm run test:package && cp README.md packages/cli/README.md && cd packages/cli && npm publish"
   }

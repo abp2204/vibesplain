@@ -15,4 +15,8 @@ export {
 } from './signals.js';
 export { readGraph, writeGraph, type ImportGraph } from './graph.js';
 export { AdapterRegistry, adapterRegistry, type DomainAdapter } from './pipeline/adapters/index.js';
+export {
+  ArtifactBundleWriter,
+  type Artifact, type ManifestArtifact, type ArtifactManifest,
+} from './artifacts.js';
 

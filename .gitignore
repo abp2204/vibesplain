@@ -5,9 +5,14 @@ node_modules/
 packages/brain/dist/
 packages/cli/dist/
 packages/ui/dist/
+packages/teardown/dist/
 
 # Generated analysis data
 .vibe-splainer/
+.vibesplain/
+
+# Generated teardown reports
+.teardown/
 
 # Lock file (use npm ci in CI)
 # package-lock.json is committed

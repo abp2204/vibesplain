@@ -1,0 +1,118 @@
+{
+  "version": "0.1",
+  "name": "Agent product positioning gaps",
+  "scope": "Seed to Series A companies selling an AI agent as the primary product.",
+  "maxGaps": 6,
+  "calibration": {
+    "expectDominant": ["unit-of-work", "failure-behavior", "time-to-first-value"],
+    "note": "Axes 1, 2 and 8 are where most agent landing pages fail. If they do not dominate findings, treat that as a signal the rubric is miscalibrated, not that the company is fine."
+  },
+  "spine": {
+    "minBeats": 3,
+    "maxBeats": 5,
+    "beatOneAxis": "time-to-first-value",
+    "requireBoringCase": true
+  },
+  "objections": {
+    "count": 3,
+    "mandatoryAxes": ["failure-behavior"]
+  },
+  "axes": [
+    {
+      "id": "unit-of-work",
+      "n": 1,
+      "name": "Unit of work",
+      "buyerQuestion": "What am I buying one of?",
+      "dealStage": "First call — buyer cannot price it, so cannot champion it internally.",
+      "probes": [
+        "Does the page name a countable unit (per resolved ticket, per document, per hour saved, per seat)?",
+        "Is the unit the same one pricing is denominated in, or do the two disagree?",
+        "If the product is priced per seat but the value is per task, is that gap acknowledged anywhere?"
+      ]
+    },
+    {
+      "id": "failure-behavior",
+      "n": 2,
+      "name": "Failure behavior",
+      "buyerQuestion": "What happens when it's wrong?",
+      "dealStage": "Technical evaluation — the first hard question from the person who will own the incident.",
+      "probes": [
+        "Does the page state what the agent does when it is uncertain or wrong?",
+        "Is there a stated accuracy, escalation path, or rollback story?",
+        "Are failures framed as handled, or is the page silent on the possibility?"
+      ]
+    },
+    {
+      "id": "blast-radius",
+      "n": 3,
+      "name": "Blast radius",
+      "buyerQuestion": "What does it touch — auth, permissions, data?",
+      "dealStage": "Security review — stalls in procurement, often invisibly.",
+      "probes": [
+        "Does the page enumerate what systems the agent reads from and writes to?",
+        "Are write actions distinguished from read actions?",
+        "Is permission scoping, data residency, or retention addressed?"
+      ]
+    },
+    {
+      "id": "human-position",
+      "n": 4,
+      "name": "Human position",
+      "buyerQuestion": "Where am I in the loop, and can I get out?",
+      "dealStage": "Pilot design — determines whether the pilot is staffed or abandoned.",
+      "probes": [
+        "Does the page say where a human approves, reviews, or intervenes?",
+        "Is the human-in-the-loop step presented as permanent or as training wheels that come off?",
+        "Is there a stated path from supervised to autonomous?"
+      ]
+    },
+    {
+      "id": "latency-shape",
+      "n": 5,
+      "name": "Latency shape",
+      "buyerQuestion": "Real-time or async, and does that match my workflow?",
+      "dealStage": "Workflow fit — surfaces late, after the buyer has already imagined the wrong integration.",
+      "probes": [
+        "Does the page say whether the agent responds in seconds, minutes, or overnight?",
+        "Is the interaction model (chat, queue, background job, webhook) stated?",
+        "Does the demo imply a latency the product does not actually deliver?"
+      ]
+    },
+    {
+      "id": "boring-case-proof",
+      "n": 6,
+      "name": "Boring-case proof",
+      "buyerQuestion": "Does it work on the repeated case, not just the demo case?",
+      "dealStage": "Reference check — buyer asks an existing customer what it does on a normal Tuesday.",
+      "probes": [
+        "Does the page show a high-frequency, unglamorous workflow?",
+        "Are the examples the hardest cases or the most common ones?",
+        "Is there volume or repetition evidence, as opposed to a single impressive anecdote?"
+      ]
+    },
+    {
+      "id": "refusal-surface",
+      "n": 7,
+      "name": "Refusal surface",
+      "buyerQuestion": "What does it explicitly not do?",
+      "dealStage": "Scoping — an unbounded product invites out-of-scope expectations that later read as failure.",
+      "probes": [
+        "Does the page state anything the agent will not attempt?",
+        "Are limits framed as deliberate design, or absent entirely?",
+        "Does the breadth of claims make the product sound unbounded?"
+      ]
+    },
+    {
+      "id": "time-to-first-value",
+      "n": 8,
+      "name": "Time-to-first-value",
+      "buyerQuestion": "How long until I see it work on my own data?",
+      "dealStage": "Top of funnel — determines whether the buyer starts at all.",
+      "probes": [
+        "Does the page state how long setup or onboarding takes?",
+        "Can the buyer see it work on their own data without a sales call?",
+        "Is there a self-serve trial, sandbox, or sample run — and is the path to it stated?"
+      ]
+    }
+  ]
+}
