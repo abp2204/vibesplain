@@ -166,13 +166,25 @@ export async function crawlSurface(rootInput: string, options: CrawlOptions = {}
 
   // Rank candidate links, keeping the best URL per page kind.
   const bestByKind = new Map<PageKind, { url: string; weight: number }>();
+  const offsiteByKind = new Map<PageKind, string>();
+
   for (const link of extractLinks(landing.html, landingUrl)) {
-    if (!sameSite(link.href, landingUrl)) continue;
     if (SKIP_EXTENSIONS.test(new URL(link.href).pathname)) continue;
     if (link.href === landingUrl) continue;
 
     const hit = classify(link.href, link.text);
     if (!hit) continue;
+
+    // Classified but on another domain — commonly docs.company.io, a help
+    // centre, or the company's previous domain after a rename. We do not
+    // follow it by default (that is how a crawler wanders onto third-party
+    // sites), but it must not vanish silently: an unread docs page is the
+    // difference between "they never say what happens when it's wrong" being
+    // a finding and being a false accusation.
+    if (!sameSite(link.href, landingUrl)) {
+      if (!offsiteByKind.has(hit.kind)) offsiteByKind.set(hit.kind, link.href);
+      continue;
+    }
 
     const current = bestByKind.get(hit.kind);
     if (!current || hit.weight > current.weight) {
@@ -210,6 +222,12 @@ export async function crawlSurface(rootInput: string, options: CrawlOptions = {}
   for (const [kind, candidate] of overflow) {
     notes.push(`Skipped ${kind} page ${candidate.url} — the --max-pages budget of ${opts.maxPages} was already spent.`);
     coverage.set(kind, { kind, status: 'skipped-cap', url: candidate.url });
+  }
+
+  for (const [kind, url] of offsiteByKind) {
+    if (coverage.has(kind)) continue;
+    notes.push(`A ${kind} page is linked at ${url}, on a different domain, and was not fetched.`);
+    coverage.set(kind, { kind, status: 'offsite', url, reason: 'linked on a different domain' });
   }
 
   const ALL_KINDS: PageKind[] = ['landing', 'pricing', 'docs', 'how-it-works', 'security', 'faq', 'about', 'other'];
@@ -253,7 +271,9 @@ export async function crawlSurface(rootInput: string, options: CrawlOptions = {}
  * which is itself evidence.
  */
 export function unreadKinds(surface: WebSurface): PageCoverage[] {
-  return surface.coverage.filter(c => c.status === 'fetch-failed' || c.status === 'skipped-cap');
+  return surface.coverage.filter(
+    c => c.status === 'fetch-failed' || c.status === 'skipped-cap' || c.status === 'offsite'
+  );
 }
 
 /** The exact text handed to the grill pass — also the corpus quotes are verified against. */

@@ -31,15 +31,20 @@ function whatWasRead(report: TeardownReport): string {
     );
   }
   const unread = report.surface.coverage.filter(
-    c => c.status === 'fetch-failed' || c.status === 'skipped-cap'
+    c => c.status === 'fetch-failed' || c.status === 'skipped-cap' || c.status === 'offsite'
   );
   if (unread.length > 0) {
     lines.push(
       '',
       '**Pages that exist but were not read.** Findings that depend on these are flagged inline below, not asserted:',
-      ...unread.map(c => `- ${c.kind}${c.url ? ` (${c.url})` : ''} — ${
-        c.status === 'fetch-failed' ? `could not be fetched: ${c.reason}` : 'skipped by the page budget'
-      }`),
+      ...unread.map(c => {
+        const why = c.status === 'fetch-failed'
+          ? `could not be fetched: ${c.reason}`
+          : c.status === 'offsite'
+            ? 'linked on a different domain and not fetched'
+            : 'skipped by the page budget';
+        return `- ${c.kind}${c.url ? ` (${c.url})` : ''} — ${why}`;
+      }),
     );
   }
 

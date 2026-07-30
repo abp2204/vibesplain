@@ -54,8 +54,8 @@ function fixtureSurface(): WebSurface {
       { kind: 'security', status: 'fetch-failed', url: 'https://rezolve.example/security', reason: 'HTTP 503' },
       // Linked but cut by the page budget.
       { kind: 'faq', status: 'skipped-cap', url: 'https://rezolve.example/faq' },
-      // Genuinely absent — evidence of absence, so gaps on it stand.
-      { kind: 'docs', status: 'not-linked' },
+      // Linked on another domain — we know it exists and did not read it.
+      { kind: 'docs', status: 'offsite', url: 'https://docs.rezolve.io/', reason: 'linked on a different domain' },
       { kind: 'how-it-works', status: 'not-linked' },
       { kind: 'about', status: 'not-linked' },
       { kind: 'other', status: 'not-linked' },
@@ -399,6 +399,20 @@ async function testCoverageGuard() {
   assert(
     legitimate.coverageWarning === undefined,
     'a page that was never linked is itself evidence — that gap must NOT be flagged',
+  );
+
+  // docs sits on another domain → we know it exists and did not read it.
+  // Asserting "they never say what happens when it's wrong" here would be a
+  // false accusation with the answer sitting one hop away.
+  const offsite = flagCoverage({ ...bare, axisId: 'failure-behavior', evidence: [] }, surface, rubric);
+  assert(offsite.coverageWarning !== undefined, 'a gap resting on an offsite page must be flagged');
+  assert(
+    offsite.coverageWarning!.includes('different domain'),
+    'the warning must say the page lives on another domain',
+  );
+  assert(
+    offsite.coverageWarning!.includes('docs.rezolve.io'),
+    'the warning must name the offsite URL so the operator can go read it',
   );
 
   // Verified evidence outranks coverage: we have proof, so the gap is safe.

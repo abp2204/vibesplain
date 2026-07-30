@@ -28,8 +28,14 @@ export function flagCoverage(gap: Gap, surface: WebSurface, rubric: Rubric): Gap
   const unread = unreadKinds(surface).filter(c => axis.evidencePages.includes(c.kind));
   if (unread.length === 0) return gap;
 
+  const why = (c: { status: string; reason?: string }) => {
+    if (c.status === 'fetch-failed') return `could not be fetched: ${c.reason}`;
+    if (c.status === 'offsite') return 'linked on a different domain and not fetched';
+    return 'skipped by the page budget';
+  };
+
   const detail = unread
-    .map(c => `${c.kind} (${c.status === 'fetch-failed' ? `could not be fetched: ${c.reason}` : 'skipped by the page budget'}${c.url ? ` — ${c.url}` : ''})`)
+    .map(c => `${c.kind} (${why(c)}${c.url ? ` — ${c.url}` : ''})`)
     .join('; ');
 
   return {

@@ -51,7 +51,13 @@ export interface VideoRef {
  * failed to read is absence of evidence — and a gap asserted on the second is a
  * false accusation waiting to be corrected in public.
  */
-export type CoverageStatus = 'fetched' | 'not-linked' | 'fetch-failed' | 'skipped-cap';
+export type CoverageStatus =
+  | 'fetched'
+  | 'not-linked'
+  | 'fetch-failed'
+  | 'skipped-cap'
+  /** Linked, but on another domain (docs.company.io, a help centre, a former domain). */
+  | 'offsite';
 
 export interface PageCoverage {
   kind: PageKind;
